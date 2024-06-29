@@ -889,6 +889,18 @@ static const ggml_type_traits_t type_traits[GGML_TYPE_COUNT] = {
         .vec_dot                  = (ggml_vec_dot_t) ggml_vec_dot_bf16,
         .vec_dot_type             = GGML_TYPE_BF16,
         .nrows                    = 1,
+    },
+    [GGML_TYPE_AQ2_M] = {
+        .type_name                = "aq2_m",
+        .blck_size                = QK_K,
+        .type_size                = sizeof(block_aq2_m),
+        .is_quantized             = true,
+        .to_float                 = (ggml_to_float_t) dequantize_row_aq2_m,
+        .from_float               = NULL,
+        .from_float_reference     = NULL,
+        .vec_dot                  = ggml_vec_dot_aq2_m_q8_K,
+        .vec_dot_type             = GGML_TYPE_Q8_K,
+        .nrows                    = 1,
     }
 };
 
@@ -3190,6 +3202,7 @@ enum ggml_type ggml_ftype_to_ggml_type(enum ggml_ftype ftype) {
         case GGML_FTYPE_MOSTLY_IQ2_S:         wtype = GGML_TYPE_IQ2_S;    break;
         case GGML_FTYPE_UNKNOWN:              wtype = GGML_TYPE_COUNT; break;
         case GGML_FTYPE_MOSTLY_Q4_1_SOME_F16: wtype = GGML_TYPE_COUNT; break;
+        case GGML_FTYPE_MOSTLY_AQ2_M:         wtype = GGML_TYPE_AQ2_M; break;
     }
 
     GGML_ASSERT(wtype != GGML_TYPE_COUNT);
@@ -9432,6 +9445,7 @@ static void ggml_compute_forward_add(
         case GGML_TYPE_IQ4_XS:
         case GGML_TYPE_IQ3_S:
         case GGML_TYPE_IQ2_S:
+        case GGML_TYPE_AQ2_M:
             {
                 ggml_compute_forward_add_q_f32(params, dst);
             } break;
@@ -9807,6 +9821,7 @@ static void ggml_compute_forward_add1(
         case GGML_TYPE_IQ4_XS:
         case GGML_TYPE_IQ3_S:
         case GGML_TYPE_IQ2_S:
+        case GGML_TYPE_AQ2_M:
             {
                 ggml_compute_forward_add1_q_f32(params, dst);
             } break;
@@ -9932,6 +9947,7 @@ static void ggml_compute_forward_acc(
         case GGML_TYPE_IQ4_XS:
         case GGML_TYPE_IQ3_S:
         case GGML_TYPE_IQ2_S:
+        case GGML_TYPE_AQ2_M:
         default:
             {
                 GGML_ASSERT(false);
@@ -12704,6 +12720,7 @@ static void ggml_compute_forward_out_prod(
         case GGML_TYPE_IQ4_XS:
         case GGML_TYPE_IQ3_S:
         case GGML_TYPE_IQ2_S:
+        case GGML_TYPE_AQ2_M:
             {
                 ggml_compute_forward_out_prod_q_f32(params, dst);
             } break;
@@ -12889,6 +12906,7 @@ static void ggml_compute_forward_set(
         case GGML_TYPE_IQ4_XS:
         case GGML_TYPE_IQ3_S:
         case GGML_TYPE_IQ2_S:
+        case GGML_TYPE_AQ2_M:
         default:
             {
                 GGML_ASSERT(false);
@@ -13148,6 +13166,7 @@ static void ggml_compute_forward_get_rows(
         case GGML_TYPE_IQ4_XS:
         case GGML_TYPE_IQ3_S:
         case GGML_TYPE_IQ2_S:
+        case GGML_TYPE_AQ2_M:
             {
                 ggml_compute_forward_get_rows_q(params, dst);
             } break;
@@ -13740,6 +13759,7 @@ static void ggml_compute_forward_clamp(
         case GGML_TYPE_I64:
         case GGML_TYPE_F64:
         case GGML_TYPE_COUNT:
+        case GGML_TYPE_AQ2_M:
             {
                 GGML_ASSERT(false);
             } break;

@@ -1149,3 +1149,29 @@ static __device__ __forceinline__ float vec_dot_iq4_xs_q8_1(
     return vec_dot_iq4_xs_q8_1(vbq, bq8_1, kbx, iqs);
 #endif
 }
+
+static __device__ __forceinline__ float vec_dot_aq2_m_q8_1(
+    const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & kbx, const int & iqs) {
+    
+    const void * codebook = vbq;
+    const void * codes = vbq + 65536 * 8 / 2;
+
+    const block_aq2_m * bq2 = (const block_aq2_m *) (codes) + kbx;
+
+    const int ib32 = iqs;
+    const uint16_t * q2 = bq2->qs + 4*ib32;
+    const uint8_t  * aux8 = (const uint8_t *)q2;
+    const int8_t   * q8 = bq8_1[ib32].qs;
+    uint32_t aux32 = q2[2] | (q2[3] << 16);
+    int sumi = 0;
+    for (int l = 0; l < 4; ++l) {
+        const uint8_t * grid = (const uint8_t *)(codebook + aux8[l]);
+        for (int j = 0; j < 8; ++j) {
+            sumi += q8[j] * grid[j];
+        }
+        q8 += 8;
+        aux32 >>= 8;
+    }
+    const float d = (float)bq2->d * __low2float(bq8_1[ib32].ds);
+    return d * sumi;
+}

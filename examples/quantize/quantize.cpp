@@ -33,6 +33,7 @@ static const std::vector<struct quant_option> QUANT_OPTIONS = {
     { "IQ3_M",  LLAMA_FTYPE_MOSTLY_IQ3_M,  " 3.66 bpw quantization mix",        },
     { "Q3_K",   LLAMA_FTYPE_MOSTLY_Q3_K_M, "alias for Q3_K_M"                   },
     { "IQ3_XS", LLAMA_FTYPE_MOSTLY_IQ3_XS, " 3.3 bpw quantization",             },
+    { "AQ2_M",  LLAMA_FTYPE_MOSTLY_AQ2_M,  " 2-2.3 bpw quantization",           },
     { "Q3_K_S", LLAMA_FTYPE_MOSTLY_Q3_K_S, " 3.41G, +1.6321 ppl @ Llama-3-8B",  },
     { "Q3_K_M", LLAMA_FTYPE_MOSTLY_Q3_K_M, " 3.74G, +0.6569 ppl @ Llama-3-8B",  },
     { "Q3_K_L", LLAMA_FTYPE_MOSTLY_Q3_K_L, " 4.03G, +0.5562 ppl @ Llama-3-8B",  },

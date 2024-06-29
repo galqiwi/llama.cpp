@@ -3644,6 +3644,35 @@ void quantize_row_q8_K(const float * restrict x, void * restrict y, int64_t k) {
     quantize_row_q8_K_reference(x, y, k);
 }
 
+// ====================== AQLM ===================================================
+
+void dequantize_row_aq2_m(const block_aq2_m * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k) {
+    assert(k % QK_K == 0);
+    const int64_t nb = k / QK_K;
+
+    const ggml_fp16_t * codebook = (const ggml_fp16_t *)(x);
+    const block_aq2_m * codes    = (const block_aq2_m *)(codebook + 65536 * 8 / 2); 
+
+    uint32_t aux32[2];
+    const uint8_t * aux8 = (const uint8_t *)aux32;
+
+    for (int i = 0; i < nb; i++) {
+
+        const float d = GGML_FP16_TO_FP32(codes[i].d);
+
+        for (int ib32 = 0; ib32 < QK_K/32; ++ib32) {
+            memcpy(aux32, codes[i].qs + 4*ib32, 2*sizeof(uint32_t));
+            for (int l = 0; l < 4; ++l) {
+                const uint8_t * grid = (const uint8_t *)(codebook + aux8[l]);
+                for (int j = 0; j < 8; ++j) {
+                    y[j] = d * grid[j];
+                }
+                y += 8;
+            }
+        }
+    }
+}
+
 //===================================== Dot ptoducts =================================
 
 //
@@ -12273,6 +12302,10 @@ void ggml_vec_dot_iq4_xs_q8_K(int n, float * restrict s, size_t bs, const void *
     }
     *s = sumf;
 #endif
+}
+
+void ggml_vec_dot_aq2_m_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, size_t bx, const void * GGML_RESTRICT vy, size_t by, int nrc) {
+    assert(false);
 }
 
 // ================================ IQ2 quantization =============================================
