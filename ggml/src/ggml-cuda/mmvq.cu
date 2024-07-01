@@ -23,7 +23,7 @@ static constexpr __device__ vec_dot_q_cuda_t get_vec_dot_q_cuda(ggml_type type) 
         type == GGML_TYPE_IQ4_NL ? vec_dot_iq4_nl_q8_1 :
         type == GGML_TYPE_IQ4_XS ? vec_dot_iq4_xs_q8_1 :
         type == GGML_TYPE_IQ3_S ? vec_dot_iq3_s_q8_1 :
-        type == GGML_TYPE_AQ2_M ? vec_dot_aq2_m_q8_1 :
+        type == GGML_TYPE_AQ2_M ? vec_dot_aq2_m_f16 :
         nullptr;
 }
 

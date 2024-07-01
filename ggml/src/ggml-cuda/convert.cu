@@ -456,19 +456,7 @@ static __global__ void dequantize_block_iq4_xs(const void * __restrict__ vx, dst
 
 template<typename dst_t>
 static __global__ void dequantize_block_aq2_m(const void * __restrict__ codebook, const void * __restrict__ vx, dst_t * __restrict__ yy) {
-
-    const int64_t i   = blockIdx.x;
-    const block_aq2_m * codes = (const block_aq2_m  *) vx;
-
-    const int64_t tid = threadIdx.x;
-    const int64_t il = tid/8; // 0...3
-    const int64_t ib = tid%8; // 0...7
-    dst_t * y = yy + i*QK_K + 32*ib + 8*il;
-    const uint16_t * q2 = codes[i].qs + 4*ib;
-    const uint8_t  * aux8 = (const uint8_t *)q2;
-    const uint8_t  * grid = (const uint8_t *)(codebook + aux8[il]);
-    const float d = (float)codes[i].d;
-    for (int j = 0; j < 8; ++j) y[j] = d * grid[j];
+    assert(false);
 }
 
 template <int qk, int qr, dequantize_kernel_t dequantize_kernel, typename dst_t>
