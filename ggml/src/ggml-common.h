@@ -378,7 +378,7 @@ typedef struct {
     uint32_t d[4];
     uint16_t qs[512/8];
 } block_aq2_m;
-static_assert(sizeof(block_aq2_m) == 128 + 512/8 * 16, "wrong aq2_m block size/padding");
+static_assert(sizeof(block_aq2_m) == 16 + 512/8 * 2, "wrong aq2_m block size/padding");
 
 #endif // GGML_COMMON_DECL
 #endif // GGML_COMMON_DECL
