@@ -455,8 +455,45 @@ static __global__ void dequantize_block_iq4_xs(const void * __restrict__ vx, dst
 }
 
 template<typename dst_t>
-static __global__ void dequantize_block_aq2_m(const void * __restrict__ codebook, const void * __restrict__ vx, dst_t * __restrict__ yy) {
-    assert(false);
+static __global__ void dequantize_block_aq2_m(
+    const int4* __restrict__ A,
+    int4* __restrict__ C,
+    const int4* __restrict__ codebook,
+    int prob_m,
+    int prob_k
+) {
+    int a_gl_stride = prob_k / 8 / 8;
+    int a_gl_rd = (blockDim.x / 32) * blockIdx.x + (threadIdx.x / 32);
+    bool pred = a_gl_rd < prob_m;
+    a_gl_rd = a_gl_stride * a_gl_rd + threadIdx.x % 32;
+    int a_gl_end = a_gl_rd + a_gl_stride - threadIdx.x % 32;
+
+    int iters = (prob_k / 8 + 8 * 32 - 1) / (8 * 32);
+    while (iters--) {
+        if (pred && a_gl_rd < a_gl_end) {
+            const half scale = *reinterpret_cast<const half*>(&A[a_gl_rd]);
+            const uint16_t* enc = reinterpret_cast<const uint16_t*>(&A[a_gl_rd]) + 1;
+            #pragma unroll
+            for (int i = 0; i < 8; i++) {
+                uint32_t dec[4];
+                // We bypass the L1 cache to avoid massive amounts of memory streaming that doesn't
+                // actually help us; this brings > 2x speedup.
+                asm volatile (
+                "ld.cg.global.v4.u32 {%0, %1, %2, %3}, [%4];"
+                : "=r"(dec[0]), "=r"(dec[1]), "=r"(dec[2]), "=r"(dec[3])
+                : "l"((void*) &codebook[enc[i]])
+                );
+
+                #pragma unroll
+                for (int j = 0; j < 8; j++) {
+                    reinterpret_cast<half*>(dec)[j] *= scale;
+                }
+
+                C[a_gl_rd + i] = reinterpret_cast<int4*>(&dec)[0];
+            }
+        }
+        a_gl_rd += 32;
+    }
 }
 
 template <int qk, int qr, dequantize_kernel_t dequantize_kernel, typename dst_t>
@@ -576,8 +613,27 @@ static void dequantize_row_iq4_xs_cuda(const void * vx, dst_t * y, const int64_t
 
 template<typename dst_t>
 static void dequantize_row_aq2_m_cuda(const void * vx, dst_t * y, const int64_t k, cudaStream_t stream) {
-    const int nb = k / QK_K;
-    dequantize_block_aq2_m<<<nb, 32, 0, stream>>>(vx, (half*)(vx) + pow(2, 16) * 8, y);
+    const int prob_k = 512;
+    const int prob_m = k / prob_k;
+
+    int sms;
+    cudaDeviceGetAttribute(&sms, cudaDevAttrMultiProcessorCount, stream.device());
+    int waves = 0;
+    int thread_m;
+    do {
+        waves++;
+        thread_m = ceildiv(prob_m, waves * sms);
+    } while (thread_m > THREAD_M);
+
+    int blocks = ceildiv(prob_m, thread_m);
+    int threads = 32 * thread_m;
+    dequantize_block_aq2_m<<<blocks, 32, 0, stream>>>(
+        (const int4*) vx + 65536, // 16 * 65536 bytes offset for codebook
+        (int4*) y,
+        (const int4*) vx,         // vx starts with codebook 
+        prob_m,
+        prob_k
+    );
 }
 
 template <typename src_t, typename dst_t>

@@ -3647,11 +3647,11 @@ void quantize_row_q8_K(const float * restrict x, void * restrict y, int64_t k) {
 // ====================== AQLM ===================================================
 
 void dequantize_row_aq2_m(const block_aq2_m * GGML_RESTRICT x, float * GGML_RESTRICT y, int64_t k) {
-    assert(k % QK_K == 0);
-    const int64_t nb = k / QK_K;
+    assert(k % 512 == 0);
+    const int64_t nb = k / 512;
 
     const ggml_fp16_t * codebook = (const ggml_fp16_t *)(x);
-    const block_aq2_m * codes    = (const block_aq2_m *)(codebook + 65536 * 8 / 2); 
+    const block_aq2_m * codes    = (const block_aq2_m *)(codebook + 65536 * 8);
 
     uint32_t aux32[2];
     const uint8_t * aux8 = (const uint8_t *)aux32;
@@ -3660,7 +3660,7 @@ void dequantize_row_aq2_m(const block_aq2_m * GGML_RESTRICT x, float * GGML_REST
 
         const float d = GGML_FP16_TO_FP32(codes[i].d);
 
-        for (int ib32 = 0; ib32 < QK_K/32; ++ib32) {
+        for (int ib32 = 0; ib32 < 512/32; ++ib32) {
             memcpy(aux32, codes[i].qs + 4*ib32, 2*sizeof(uint32_t));
             for (int l = 0; l < 4; ++l) {
                 const uint8_t * grid = (const uint8_t *)(codebook + aux8[l]);

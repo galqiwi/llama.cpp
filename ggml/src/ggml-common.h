@@ -372,10 +372,10 @@ static_assert(sizeof(block_iq4_xs) == sizeof(ggml_half) + sizeof(uint16_t) + QK_
 
 // AQLM
 typedef struct {
-    ggml_half d;
-    uint16_t qs[QK_K/8];
+    uint32_t d[4];
+    uint16_t qs[512/8];
 } block_aq2_m;
-static_assert(sizeof(block_aq2_m) == sizeof(ggml_half) + QK_K/8*sizeof(uint16_t), "wrong aq2_m block size/padding");
+static_assert(sizeof(block_aq2_m) == 128 + 512/8 * 16, "wrong aq2_m block size/padding");
 
 #endif // GGML_COMMON_DECL
 #endif // GGML_COMMON_DECL
