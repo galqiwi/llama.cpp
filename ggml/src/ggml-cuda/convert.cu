@@ -459,8 +459,8 @@ static __global__ void dequantize_block_aq2_m(
     const int4* __restrict__ A,
     int4* __restrict__ C,
     const int4* __restrict__ codebook,
-    int prob_m,
-    int prob_k
+    const int prob_m,
+    const int prob_k
 ) {
     int a_gl_stride = prob_k / 8 / 8;
     int a_gl_rd = (blockDim.x / 32) * blockIdx.x + (threadIdx.x / 32);
@@ -611,13 +611,19 @@ static void dequantize_row_iq4_xs_cuda(const void * vx, dst_t * y, const int64_t
     dequantize_block_iq4_xs<<<nb, 32, 0, stream>>>(vx, y);
 }
 
+inline int ceildiv(int a, int b) {
+  return (a + b - 1) / b;
+}
+
+const int THREAD_M = 16;
+
 template<typename dst_t>
 static void dequantize_row_aq2_m_cuda(const void * vx, dst_t * y, const int64_t k, cudaStream_t stream) {
     const int prob_k = 512;
     const int prob_m = k / prob_k;
 
     int sms;
-    cudaDeviceGetAttribute(&sms, cudaDevAttrMultiProcessorCount, stream.device());
+    cudaDeviceGetAttribute(&sms, cudaDevAttrMultiProcessorCount, 0);
     int waves = 0;
     int thread_m;
     do {
@@ -627,7 +633,7 @@ static void dequantize_row_aq2_m_cuda(const void * vx, dst_t * y, const int64_t 
 
     int blocks = ceildiv(prob_m, thread_m);
     int threads = 32 * thread_m;
-    dequantize_block_aq2_m<<<blocks, 32, 0, stream>>>(
+    dequantize_block_aq2_m<dst_t><<<blocks, threads, 0, stream>>>(
         (const int4*) vx + 65536, // 16 * 65536 bytes offset for codebook
         (int4*) y,
         (const int4*) vx,         // vx starts with codebook 

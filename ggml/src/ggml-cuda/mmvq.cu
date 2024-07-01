@@ -416,6 +416,7 @@ void ggml_cuda_op_mul_mat_vec_q(
             break;
         case GGML_TYPE_AQ2_M:
             mul_mat_vec_aq2_m_f16_cuda(src0_dd_i, src1_ddq_i, dst_dd_i, ne00, row_diff, src1_padded_row_size, src1_ncols, nrows_dst, stream);
+            break;
         default:
             GGML_ASSERT(false);
             break;

@@ -12312,7 +12312,7 @@ void ggml_vec_dot_aq2_m_f16(int n, float * GGML_RESTRICT s, size_t bs, const voi
     UNUSED(by);
     UNUSED(bs);
 
-    assert(false);
+    GGML_ASSERT(false);
 }
 
 // ================================ IQ2 quantization =============================================
