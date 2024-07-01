@@ -892,7 +892,7 @@ static const ggml_type_traits_t type_traits[GGML_TYPE_COUNT] = {
     },
     [GGML_TYPE_AQ2_M] = {
         .type_name                = "aq2_m",
-        .blck_size                = QK_K,
+        .blck_size                = 512,
         .type_size                = sizeof(block_aq2_m),
         .is_quantized             = true,
         .to_float                 = (ggml_to_float_t) dequantize_row_aq2_m,
@@ -3069,6 +3069,10 @@ GGML_CALL size_t ggml_nbytes(const struct ggml_tensor * tensor) {
         for (int i = 1; i < GGML_MAX_DIMS; ++i) {
             nbytes += (tensor->ne[i] - 1)*tensor->nb[i];
         }
+    }
+
+    if (tensor->type == GGML_TYPE_AQ2_M) {
+        nbytes += 2 * pow(2, 16) * 8;
     }
 
     return nbytes;

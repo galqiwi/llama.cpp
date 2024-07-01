@@ -231,7 +231,7 @@ class Model:
     def get_merged_tensors(self):
         tensors = {k: v for k,v in self.get_tensors()}
         for name, data_torch in tensors.items():
-            if name.endswith("codebooks"):
+            if name.endswith("codebooks") or name.endswith("scales"):
                 continue
             
             n_head = self.hparams["num_attention_heads"]
@@ -246,7 +246,6 @@ class Model:
                 codes = data_torch
                 corresp_codebooks = tensors[name[:-len("codes")] + "codebooks"].flatten()
                 
-                
                 codes = codes.squeeze(2)
                 shape = [codes.shape[0], codes.shape[1] * 8]
                 
@@ -256,17 +255,16 @@ class Model:
                 corresp_scale = torch.repeat_interleave(corresp_scale, codes.shape[1] // 64)
                 corresp_scale = corresp_scale.reshape(-1, 1).repeat(1, 8)
 
-                blocks = torch.cat([corresp_scale, codes.flatten().reshape(-1, 64)], dim=1).flatten()
+                blocks = torch.cat([corresp_scale, codes.flatten().reshape(-1, 64).view(dtype=torch.float16)], dim=1).flatten()
                 data_torch = torch.cat([corresp_codebooks, blocks])
                 
-                new_name = name[:-len("codes")] + "weight"
+                name = name[:-len("codes")] + "weight"
                 dtype = gguf.GGMLQuantizationType.AQ2_M
             else:
                 shape = data_torch.shape
-                new_name = name
                 dtype = gguf.GGMLQuantizationType.F16
 
-            yield new_name, data_torch, shape, dtype
+            yield self.map_tensor_name(name), data_torch, shape, dtype
 
 
     @staticmethod
@@ -284,12 +282,38 @@ class Model:
             # we don't need these
             if new_name.endswith((".attention.masked_bias", ".attention.bias", ".rotary_emb.inv_freq")):
                 continue
+            
+            # use the first number-like part of the tensor name as the block id
+            bid = None
+            for part in new_name.split("."):
+                if part.isdecimal():
+                    bid = int(part)
+                    break
 
             data = data_torch.squeeze().numpy()
             orig_dtype = data.dtype
             
-            if dtype != gguf.GGMLQuantizationType.AQ2_M:
-                data = data.astype(np.float16)
+            # Most of the codebase that takes in 1D tensors or norms only handles F32 tensors
+            # Conditions should closely match those in llama_model_quantize_internal in llama.cpp
+            extra_f32 = any(cond for cond in (
+                len(shape) == 1,
+                new_name.endswith("_norm.weight"),
+            ))
+
+            # Some tensor types are always in float32
+            extra_f32 = extra_f32 or any(self.match_model_tensor_name(new_name, key, bid) for key in (
+                gguf.MODEL_TENSOR.FFN_GATE_INP,
+                gguf.MODEL_TENSOR.POS_EMBD,
+                gguf.MODEL_TENSOR.TOKEN_TYPES,
+            ))
+
+
+            if extra_f32:
+                data = data.astype(np.float32)
+                dtype = gguf.GGMLQuantizationType.F32
+            
+            # if dtype != gguf.GGMLQuantizationType.AQ2_M:
+            #     data = data.astype(np.float16)
             
             logger.info(f"{f'%-{max_name_len}s' % f'{new_name},'} {orig_dtype} --> {dtype}, shape={shape}")
 
