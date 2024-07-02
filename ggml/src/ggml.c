@@ -898,8 +898,8 @@ static const ggml_type_traits_t type_traits[GGML_TYPE_COUNT] = {
         .to_float                 = (ggml_to_float_t) dequantize_row_aq2_m,
         .from_float               = NULL,
         .from_float_reference     = NULL,
-        .vec_dot                  = ggml_vec_dot_aq2_m_f16,
-        .vec_dot_type             = GGML_TYPE_F16,
+        .vec_dot                  = ggml_vec_dot_aq2_m_q8_K,
+        .vec_dot_type             = GGML_TYPE_Q8_K,
         .nrows                    = 1,
     }
 };

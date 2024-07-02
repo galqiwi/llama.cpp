@@ -1150,7 +1150,7 @@ static __device__ __forceinline__ float vec_dot_iq4_xs_q8_1(
 #endif
 }
 
-static __device__ __forceinline__ float vec_dot_aq2_m_f16(
+static __device__ __forceinline__ float vec_dot_aq2_m_q8_1(
     const void * __restrict__ vbq, const block_q8_1 * __restrict__ bq8_1, const int & kbx, const int & iqs) {
     assert(false);
 }
